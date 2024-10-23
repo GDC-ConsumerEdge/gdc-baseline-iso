@@ -1,0 +1,75 @@
+#cloud-config
+autoinstall:
+  apt:
+    geoip: true
+    preserve_sources_list: false
+    primary:
+    - arches: [default]
+      uri: http://archive.ubuntu.com/ubuntu
+  version: 1
+  early-commands:
+  #autoinstall keeps choking on seeing the existing paritions and crashes before it
+  # is able to overwrite them. Wiping the disk before we let autoinstall run
+  # uncomment the second line if using two disks
+    - parted -s __DISK_PATH_0__ mklabel gpt
+    - parted -s __DISK_PATH_1__ mklabel gpt
+  shutdown: poweroff
+  kernel:
+    flavor: __KERNEL__
+  refresh-installer:
+    update: true
+  updates: all
+  identity:
+    hostname: __HOSTNAME__
+    password: "__PASSWORD__"
+    realname: __USER_NAME__
+    username: __USER_NAME__
+  keyboard:
+    layout: us
+    toggle: null
+    variant: ""
+  locale: en_US.UTF-8
+  showtrace: true
+  network:
+    version: 2
+    renderer: networkd
+    ethernets:
+      zz-all-e:
+        match:
+          name: "__ETH_NAME__"
+        dhcp4: true
+  ssh:
+    allow-pw: true
+    authorized-keys: __SSH_AUTH_KEYS__
+    install-server: true
+  storage:
+    swap:
+      size: 0
+    config:
+    - {ptable: gpt, path: __DISK_PATH_0__, wipe: superblock, preserve: false, name: '', grub_device: false,
+      type: disk, id: first-disk}
+    - {device: first-disk, size: 512M, wipe: superblock, flag: boot, number: 1, preserve: false, grub_device: true, 
+      type: partition, id: efi_part}
+    - {fstype: fat32, volume: efi_part, preserve: false, 
+      type: format, id: format_efi_part}
+    - {device: first-disk, size: __GRUB_PARTITION__, wipe: superblock, flag: '', number: 2, preserve: false, grub_device: false, 
+      type: partition, id: boot_part}
+    - {fstype: ext4, volume: boot_part, preserve: false, type: format, id: format_boot_part}
+    - {device: first-disk, size: __PRIMARY_PARTITION__, wipe: superblock, flag: linux, number: 3,  preserve: false, grub_device: false, 
+      type: partition, id: root_part}
+    - {fstype: ext4, volume: root_part, preserve: false, 
+      type: format, id: format_root_part}
+    #customer disk
+    - {ptable: gpt, path: __DISK_PATH_1__, wipe: superblock, preserve: false, name: '', grub_device: false, 
+      type: disk, id: second-disk}
+    - {device: second-disk, size: __AUX_PARTITION__, wipe: superblock, flag: '', number: 1, preserve: false, grub_device: false, 
+      type: partition, id: customer_part}
+    #- {fstype: ext4, volume: customer_part, preserve: false, type: format, id: format_customer_part}
+    #mounts
+    - {path: /, device: format_root_part, type: mount, id: mount_root_part}
+    - {path: /boot, device: format_boot_part, type: mount, id: mount_boot_part}
+    - {path: /boot/efi, device: format_efi_part, type: mount, id: mount_efi_part}
+    #- {path: /customer, device: format_customer_part, type: mount, id: mount_customer}
+  late-commands:
+    - sed -i "s/%sudo\tALL=(ALL:ALL) ALL/%sudo\tALL=(ALL:ALL) NOPASSWD:ALL/g" /target/etc/sudoers
+

@@ -1,0 +1,138 @@
+#cloud-config
+autoinstall:
+  refresh-installer:
+    update: true
+  source:
+    search_drivers: true
+  apt:
+    primary:
+    - arches: [i386, amd64]
+      uri: "http://archive.ubuntu.com/ubuntu"
+    - arches: [default]
+      uri: "http://ports.ubuntu.com/ubuntu-ports"
+    geoip: false
+  version: 1
+  early-commands:
+  #autoinstall keeps choking on seeing the existing paritions and crashes before it
+  # is able to overwrite them. Wiping the disk before we let autoinstall run
+  # uncomment the second line if using two disks
+    - parted -s __DISK_PATH_0__ mklabel gpt
+    - parted -s __DISK_PATH_1__ mklabel gpt
+  shutdown: poweroff
+  kernel:
+    flavor: __KERNEL__
+  updates: all
+  packages:
+    - clevis
+    - clevis-luks
+    - clevis-tpm2
+    - luksmeta
+    - tpm-udev
+    - tpm2-tools
+    - clevis-systemd
+    - clevis-initramfs
+    - smartmontools
+  identity:
+    hostname: __HOSTNAME__
+    password: "__PASSWORD__"
+    realname: __USER_NAME__
+    username: __USER_NAME__
+  keyboard:
+    layout: us
+    toggle: null
+    variant: ""
+  locale: en_US.UTF-8
+  showtrace: true
+  network:
+    version: 2
+    renderer: networkd
+    ethernets:
+      zz-all-e:
+        match:
+          name: "__ETH_NAME__"
+        dhcp4: true
+  ssh:
+    allow-pw: true
+    authorized-keys: __SSH_AUTH_KEYS__
+    install-server: true
+  storage:
+    swap:
+      size: 0
+    config:
+    - {ptable: gpt, path: __DISK_PATH_0__, wipe: superblock, preserve: false, name: '', grub_device: false,
+      type: disk, id: first-disk}
+    - {device: first-disk, size: 512M, wipe: superblock, flag: boot, number: 1, preserve: false, grub_device: true, 
+      type: partition, id: efi_part}
+    - {fstype: fat32, volume: efi_part, preserve: false, 
+      type: format, id: format_efi_part}
+    - {device: first-disk, size: __GRUB_PARTITION__, wipe: superblock, flag: '', number: 2, preserve: false, grub_device: false, 
+      type: partition, id: boot_part}
+    - {fstype: ext4, volume: boot_part, preserve: false, type: format, id: format_boot_part}
+    - {device: first-disk, size: __PRIMARY_PARTITION__, wipe: superblock, flag: linux, number: 3,  preserve: false, grub_device: false, 
+      type: partition, id: root_part}
+    - {volume: root_part, key: 'password', preserve: false, dm_name: root_crypt, 
+      type: dm_crypt, id: root_part_crypt}
+    - {fstype: ext4, volume: root_part_crypt, preserve: false, 
+      type: format, id: format_root_part_crypt}
+    #customer disk
+    - {ptable: gpt, path: __DISK_PATH_1__, wipe: superblock, preserve: false, name: '', grub_device: false, 
+      type: disk, id: second-disk}
+    - {device: second-disk, size: __AUX_PARTITION__, wipe: superblock, flag: '', number: 1, preserve: false, grub_device: false, 
+      type: partition, id: customer_part}
+    - {volume: customer_part, key: 'password', preserve: false, dm_name: customer_crypt, 
+      type: dm_crypt, id: customer_part_crypt}
+    #- {fstype: ext4, volume: customer_part_crypt, preserve: false, type: format, id: format_customer_part_crypt}
+    #mounts
+    - {path: /, device: format_root_part_crypt, type: mount, id: mount_root_part_crypt}
+    - {path: /boot, device: format_boot_part, type: mount, id: mount_boot_part}
+    - {path: /boot/efi, device: format_efi_part, type: mount, id: mount_efi_part}
+    #- {path: /customer, device: format_customer_part_crypt, type: mount, id: mount_customer_crypt}
+  late-commands:
+    - sed -i "s/%sudo\tALL=(ALL:ALL) ALL/%sudo\tALL=(ALL:ALL) NOPASSWD:ALL/g" /target/etc/sudoers
+    # There is a known bug that is not fixed which causes clevis-systemd services to only unlock the first 
+    # encrypted volume leaving the other(s) to be manually unlocked. Removing the dependencies
+    # from the services files resolves the issue https://bugzilla.redhat.com/show_bug.cgi?id=1784084
+    - |
+      cat > /target/usr/lib/systemd/system/clevis-luks-askpass.path << EOF
+      [Unit]
+      Description=Clevis systemd-ask-password Watcher
+      Before=cryptsetup-pre.target
+      Wants=cryptsetup-pre.target
+
+      [Path]
+      PathChanged=/run/systemd/ask-password
+
+      [Install]
+      WantedBy=cryptsetup.target
+      EOF
+    - |
+      cat > /target/usr/lib/systemd/system/clevis-luks-askpass.service << EOF
+      [Unit]
+      Description=Clevis LUKS systemd-ask-password Responder
+      DefaultDependencies=no
+
+      [Service]
+      Type=simple
+      ExecStart=/usr/lib/x86_64-linux-gnu/clevis-luks-askpass -l
+      EOF
+    #clear the tpm in case we are reinstalling a bunches!
+    # this doesnt appear to WIPE the TPM as keys are still there so not sure what it does?
+    #- curtin in-target --target=/target -- tpm2_clear
+    #enable clevis-luks-askpass.path
+    - curtin in-target --target=/target -- systemctl enable clevis-luks-askpass.path
+    # Use clevis and the password to create a new per host/node/device random LUKS key to be stored in the TPM
+    - curtin in-target --target=/target -- bash -c "lsblk --fs -l | grep crypto_LUKS | cut -f 1 -d ' ' > /tmp/devices.txt"
+    - curtin in-target --target=/target -- bash -c 'cat /tmp/devices.txt | while read -r DEVICE; do echo password | clevis luks bind -d /dev/$DEVICE tpm2 "{}"; done'
+    # Extract the clevis key from the LUKS header, decrypt using the key in the TPM, and delete the simple password from LUKS
+    - curtin in-target --target=/target -- bash -c 'cat /tmp/devices.txt | while read -r DEVICE; do source /usr/bin/clevis-luks-common-functions;clevis_luks_read_slot /dev/$DEVICE 1 | clevis decrypt | cryptsetup -v luksKillSlot /dev/$DEVICE 0; done'
+    # At this point LUKS Slot 0 which had the plain text password 'password' 
+    #   has been killed and 'password' is no long usable. 
+    #   Root is now encrypted with a random passkey stored in the TPM.
+    #   System will be able to auto-boot as long as TPM is not locked.
+    #   If drive is removed from the system - without the original TPM,
+    #   data recovery is likely impossible.
+    # ensure that both drives get unlocked before booting from root
+    - curtin in-target --target=/target -- bash -c "sed -i 's/luks/luks,initramfs/g' /etc/crypttab"
+    # Update initramfs
+    - curtin in-target --target=/target -- bash -c 'update-initramfs -u'
+

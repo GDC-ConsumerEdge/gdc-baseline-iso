@@ -1,0 +1,36 @@
+
+steps:
+- name: gcr.io/cloud-builders/gcloud
+  id: Fetch SSH Public Key
+  args: [
+    'secrets', 'versions', 'access', 'latest',
+    '--secret=ssh-key-public-${_CLUSTER_NAME}',
+    '--out-file=${_PUB_KEYS_DIR}/pub_keys',
+    '--project=${_SECRET_PROJECT_ID}'
+  ]
+
+- name: ${_REGION}-docker.pkg.dev/${PROJECT_ID}/consumer-edge/generate-isos
+  id: Generate ISOs
+  entrypoint: 'bash'
+  dir: '/opt/edge-ubuntu-20-04-autoinstall'
+  args: [
+    './generate-isos.sh',
+    '-n', '${_MACHINE_COUNT}',
+    '-h', '${_HOSTNAME_PREFIX}',
+    '-o', '${_OUTPUT_DIR}',
+    '-k', '${_PUB_KEYS_DIR}'
+  ]
+
+- name: gcr.io/cloud-builders/gsutil
+  id: ISO(s) --> Cloud Storage
+  args: ['-m','cp', '${_OUTPUT_DIR}/*.iso', 'gs://${_FLEET_PROJECT_ID}-node-iso/${_CLUSTER_NAME}']
+
+substitutions:
+  _MACHINE_COUNT: '3'
+  _HOSTNAME_PREFIX: 'edge'
+  _OUTPUT_DIR: /workspace/iso-output
+  _PUB_KEYS_DIR: /workspace/keys
+serviceAccount: 'projects/$PROJECT_ID/serviceAccounts/gcb-generate-iso@$PROJECT_ID.iam.gserviceaccount.com'
+options:
+  dynamic_substitutions: true
+  logging: CLOUD_LOGGING_ONLY
