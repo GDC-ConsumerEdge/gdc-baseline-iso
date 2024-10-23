@@ -11,3 +11,7 @@ output/
 nocloud/user-data
 
 *.pass
+
+*.code-workspace
+.vscode/
+.idea/
