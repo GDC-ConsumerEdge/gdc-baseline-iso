@@ -1,7 +1,6 @@
 *.iso
 *.img
 iso
-.apt_updated
 pub_keys
 
 build/
