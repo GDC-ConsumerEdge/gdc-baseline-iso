@@ -8,7 +8,7 @@ autoinstall:
       uri: http://archive.ubuntu.com/ubuntu
   version: 1
   early-commands:
-  #autoinstall keeps choking on seeing the existing paritions and crashes before it
+  # autoinstall keeps choking on seeing the existing partitions and crashes before it
   # is able to overwrite them. Wiping the disk before we let autoinstall run
   # uncomment the second line if using two disks
     - parted -s __DISK_PATH_0__ mklabel gpt
@@ -50,7 +50,7 @@ autoinstall:
       type: disk, id: first-disk}
     - {device: first-disk, size: 512M, wipe: superblock, flag: boot, number: 1, preserve: false, grub_device: true, 
       type: partition, id: efi_part}
-    - {fstype: fat32, volume: efi_part, preserve: false, 
+    - {fstype: fat32, volume: efi_part, preserve: false,
       type: format, id: format_efi_part}
     - {device: first-disk, size: __GRUB_PARTITION__, wipe: superblock, flag: '', number: 2, preserve: false, grub_device: false, 
       type: partition, id: boot_part}
