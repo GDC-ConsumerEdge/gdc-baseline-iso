@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # current focal version
-UBUNTU_VERSION="20.04.6"
+# UBUNTU_VERSION="20.04.6"
 
 # current jammy version
-# UBUNTU_VERSION="22.04.3"
+UBUNTU_VERSION="22.04.3"
 
 #pick kernel flavor - generic will be LTS regular focal kernel (e.g. 5.4) while HWE will be backported
 #  kernel (e.g. 5.15+).
@@ -26,5 +26,5 @@ DEFAULT_USER='abm-admin'
 ######## Smaller NUC (~250GB total storage) ########
 ####################################################
 GRUB_PARTITION="1GB"
-PRIMARY_PARTITION="100GB"
+PRIMARY_PARTITION="130GB"
 DISK_0_PATH="/dev/nvme0n1"
