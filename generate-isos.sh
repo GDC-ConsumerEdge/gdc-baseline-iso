@@ -52,6 +52,23 @@ if [[ ${VERBOSE} == "true" ]]; then
     set -x
 fi
 
+output_msg "Checking executables used in ISO creation"
+
+HAS_EXEC_ERROR=false
+
+for executable in fdisk dd diceware apt wget xorriso 7z sed gnuzip; do
+  if ! command -v "$executable" &> /dev/null
+  then
+    output_msg "$executable could not be found on the path, please install it" "warning"
+    HAS_EXEC_ERROR=true
+  fi
+done
+
+if [[ "$HAS_EXEC_ERROR" == "true" ]]; then
+    output_msg "Fatal errors preventing the continue of the creation. Please fix and retry" "error"
+    exit 1
+fi
+
 if [[ "$DISK_TYPE" == "single" ]]; then
     output_msg "Using SINGLE disk config"
     rm nocloud/user-data || true
