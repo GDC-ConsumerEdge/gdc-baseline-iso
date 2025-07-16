@@ -5,12 +5,25 @@
 ###
 
 function output_msg() {
+    TYPE=$2
+
     if [[ "${VERBOSE}" == "true" ]]; then
         set +x
     fi
     NC='\033[0m'
-    BIYellow='\033[1;93m'
-    printf "${BIYellow} $1 ${NC}\n"
+
+    if [[ "${TYPE}" == "error" ]]; then
+        color='\033[1;91m'
+    elif [[ "${TYPE}" == "warning" ]]; then
+        color='\033[0;35m'
+    elif [[ "${TYPE}" == "debug" ]]; then
+        color='\033[1;92m'
+    elif [[ "${TYPE}" == "info" ]]; then
+        color='\033[1;96m'
+    else
+        color='\033[1;93m'
+    fi
+    printf "${color} $1 ${NC}\n"
     if [[ "${VERBOSE}" == "true" ]]; then
         set -x
     fi
