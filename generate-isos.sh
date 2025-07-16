@@ -52,11 +52,20 @@ if [[ ${VERBOSE} == "true" ]]; then
     set -x
 fi
 
+output_msg "Running dependency checks"
+
+if [ "$buildingindocker" == "true" ];
+then
+    install_packages_ubuntu_container
+else
+    install_packages
+fi
+
 output_msg "Checking executables used in ISO creation"
 
 HAS_EXEC_ERROR=false
 
-for executable in fdisk dd diceware apt wget xorriso 7z sed gnuzip; do
+for executable in fdisk dd diceware apt wget xorriso 7z sed gunzip; do
   if ! command -v "$executable" &> /dev/null
   then
     output_msg "$executable could not be found on the path, please install it" "warning"
@@ -135,13 +144,6 @@ validate_config
 
 # Print variables out
 print_config
-
-if [ "$buildingindocker" == "true" ];
-then
-    install_packages_ubuntu_container
-else
-    install_packages
-fi
 
 download_iso
 
