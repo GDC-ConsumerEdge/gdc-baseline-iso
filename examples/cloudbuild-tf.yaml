@@ -1,4 +1,3 @@
-
 steps:
 - name: gcr.io/cloud-builders/gcloud
   id: Fetch SSH Public Key
@@ -21,9 +20,9 @@ steps:
     '-k', '${_PUB_KEYS_DIR}'
   ]
 
-- name: gcr.io/cloud-builders/gsutil
+- name: gcr.io/cloud-builders/gcloud
   id: ISO(s) --> Cloud Storage
-  args: ['-m','cp', '${_OUTPUT_DIR}/*.iso', 'gs://${_FLEET_PROJECT_ID}-node-iso/${_CLUSTER_NAME}']
+  args: ['storage', 'cp', '${_OUTPUT_DIR}/*.iso', 'gs://${_FLEET_PROJECT_ID}-node-iso/${_CLUSTER_NAME}']
 
 substitutions:
   _MACHINE_COUNT: '3'
