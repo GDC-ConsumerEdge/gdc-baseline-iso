@@ -1,10 +1,8 @@
 #!/bin/bash
 
-# current focal version
-# UBUNTU_VERSION="20.04.6"
-
 # current jammy version
-UBUNTU_VERSION="22.04.3"
+UBUNTU_VERSION="22.04.5"
+# UBUNTU_VERSION="24.04.4"
 
 #pick kernel flavor - generic will be LTS regular focal kernel (e.g. 5.4) while HWE will be backported
 #  kernel (e.g. 5.15+).
@@ -39,8 +37,9 @@ DEFAULT_USER='abm-admin'
 ####### This profile has 2 physical disks, #########
 ####### both about 1TB #############################
 ####################################################
-DISK_0_PATH="/dev/sda"              # OS & Boot partitions
-DISK_1_PATH="/dev/sdb"              # "Customer" partition
 GRUB_PARTITION="1GB"
 PRIMARY_PARTITION="-1"
 AUX_PARTITION="-1"
+DISK_0_PATH="/dev/nvme0n1"
+DISK_1_PATH="/dev/nvme1n1"
+ETH_NAME="en*"                      # Ethernet interface name matcher

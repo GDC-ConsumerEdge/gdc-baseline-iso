@@ -231,7 +231,7 @@ function build_iso() {
 
     for (( host=1; host<=$HOST_COUNT; host++ ))
     do
-        HOST_FINAL="${3}-${host}"
+        HOST_FINAL="${3}${host}"
         DESTINATION_FILE="${OUTPUT_PATH}/${HOST_FINAL}.iso"
 
         echo "Creating '${HOST_FINAL}' ISO image..."

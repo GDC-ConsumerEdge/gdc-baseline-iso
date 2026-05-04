@@ -8,6 +8,10 @@ trap 'error_handler $? $BASH_LINENO $LINENO $BASH_COMMAND $FUNCNAME[0] $BASH_SOU
 # Ability to skip the ISO build, only generate the contents
 SKIP_ISO_BUILD=${SKIP_ISO_BUILD:-"false"}
 
+OPTIND=1
+HOST_COUNT=1
+VERBOSE="false"
+
 error_handler() {
     set +x
     NC='\033[0m'
@@ -16,9 +20,17 @@ error_handler() {
     set -x
 }
 
-OPTIND=1
-HOST_COUNT=1
-VERBOSE="false"
+function check_dependencies() {
+    local dependencies=("mkpasswd" "diceware" "7z" "xorriso" "wget" "genisoimage")
+    output_msg "Checking for required command dependencies..."
+    for cmd in "${dependencies[@]}"; do
+        if ! command -v "$cmd" &> /dev/null; then
+            echo "Error: Required command '$cmd' is not installed. Please install it and try again."
+            echo "On Debian/Ubuntu, you may need to run: sudo apt install whois diceware p7zip-full xorriso wget genisoimage"
+            exit 1
+        fi
+    done
+}
 
 while getopts "?u:t:p:h:o:n:k:cdev" opt; do
     case "$opt" in
@@ -138,6 +150,9 @@ OUTPUT_PATH="${OUTPUT_PATH:-./output}"   # Default
 DRY_RUN="${DRY_RUN:-''}"
 FLAVOR="${FLAVOR:-generic}"             # Default setting of kernel type (if -e cmd-switch, then hwe is replaced)
 PUB_KEYS_DIR="${PUB_KEYS_DIR:-.}"
+
+# Make sure dependencies exist
+check_dependencies
 
 # Validate the configuration
 validate_config

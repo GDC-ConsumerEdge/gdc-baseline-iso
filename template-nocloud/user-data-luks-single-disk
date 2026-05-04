@@ -16,7 +16,7 @@ autoinstall:
   #autoinstall keeps choking on seeing the existing paritions and crashes before it
   # is able to overwrite them. Wiping the disk before we let autoinstall run
   # uncomment the second line if using two disks
-    - parted -s __DISK_PATH_0__ mklabel gpt
+    - parted -s __DISK_PATH_0__ mklabel gpt || true
   shutdown: poweroff
   kernel:
     flavor: __KERNEL__
@@ -60,24 +60,24 @@ autoinstall:
     config:
     - {ptable: gpt, path: __DISK_PATH_0__, wipe: superblock, preserve: false, name: '', grub_device: false,
       type: disk, id: first-disk}
-    - {device: first-disk, size: 512M, wipe: superblock, flag: boot, number: 1, preserve: false, grub_device: true, 
+    - {device: first-disk, size: 512M, wipe: superblock, flag: boot, number: 1, preserve: false, grub_device: true,
       type: partition, id: efi_part}
-    - {fstype: fat32, volume: efi_part, preserve: false, 
+    - {fstype: fat32, volume: efi_part, preserve: false,
       type: format, id: format_efi_part}
-    - {device: first-disk, size: __GRUB_PARTITION__, wipe: superblock, flag: '', number: 2, preserve: false, grub_device: false, 
+    - {device: first-disk, size: __GRUB_PARTITION__, wipe: superblock, flag: '', number: 2, preserve: false, grub_device: false,
       type: partition, id: boot_part}
     - {fstype: ext4, volume: boot_part, preserve: false, type: format, id: format_boot_part}
-    - {device: first-disk, size: __PRIMARY_PARTITION__, wipe: superblock, flag: linux, number: 3,  preserve: false, grub_device: false, 
+    - {device: first-disk, size: __PRIMARY_PARTITION__, wipe: superblock, flag: linux, number: 3,  preserve: false, grub_device: false,
       type: partition, id: root_part}
     #customer disk
-    - {device: first-disk, size: __AUX_PARTITION__, wipe: superblock, flag: '', number: 4, preserve: false, grub_device: false, 
+    - {device: first-disk, size: __AUX_PARTITION__, wipe: superblock, flag: '', number: 4, preserve: false, grub_device: false,
       type: partition, id: customer_part}
-    - {volume: root_part, key: 'password', preserve: false, dm_name: root_crypt, 
+    - {volume: root_part, key: 'password', preserve: false, dm_name: root_crypt,
       type: dm_crypt, id: root_part_crypt}
-    - {fstype: ext4, volume: root_part_crypt, preserve: false, 
+    - {fstype: ext4, volume: root_part_crypt, preserve: false,
       type: format, id: format_root_part_crypt}
     #customer disk encrypt & formating
-    - {volume: customer_part, key: 'password', preserve: false, dm_name: customer_crypt, 
+    - {volume: customer_part, key: 'password', preserve: false, dm_name: customer_crypt,
       type: dm_crypt, id: customer_part_crypt}
     #- {fstype: ext4, volume: customer_part_crypt, preserve: false, type: format, id: format_customer_part_crypt}
     #mounts
@@ -87,7 +87,7 @@ autoinstall:
     #- {path: /customer, device: format_customer_part_crypt, type: mount, id: mount_customer_crypt}
   late-commands:
     - sed -i "s/%sudo\tALL=(ALL:ALL) ALL/%sudo\tALL=(ALL:ALL) NOPASSWD:ALL/g" /target/etc/sudoers
-    # There is a known bug that is not fixed which causes clevis-systemd services to only unlock the first 
+    # There is a known bug that is not fixed which causes clevis-systemd services to only unlock the first
     # encrypted volume leaving the other(s) to be manually unlocked. Removing the dependencies
     # from the services files resolves the issue https://bugzilla.redhat.com/show_bug.cgi?id=1784084
     - |
@@ -123,8 +123,8 @@ autoinstall:
     - curtin in-target --target=/target -- bash -c 'cat /tmp/devices.txt | while read -r DEVICE; do echo password | clevis luks bind -d /dev/$DEVICE tpm2 "{}"; done'
     # Extract the clevis key from the LUKS header, decrypt using the key in the TPM, and delete the simple password from LUKS
     - curtin in-target --target=/target -- bash -c 'cat /tmp/devices.txt | while read -r DEVICE; do source /usr/bin/clevis-luks-common-functions;clevis_luks_read_slot /dev/$DEVICE 1 | clevis decrypt | cryptsetup -v luksKillSlot /dev/$DEVICE 0; done'
-    # At this point LUKS Slot 0 which had the plain text password 'password' 
-    #   has been killed and 'password' is no long usable. 
+    # At this point LUKS Slot 0 which had the plain text password 'password'
+    #   has been killed and 'password' is no long usable.
     #   Root is now encrypted with a random passkey stored in the TPM.
     #   System will be able to auto-boot as long as TPM is not locked.
     #   If drive is removed from the system - without the original TPM,
