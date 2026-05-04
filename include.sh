@@ -220,8 +220,6 @@ function build_iso() {
     sed -i "s|__USER_NAME__|$1|g" $REPO_DIR/user-data
     sed -i "s|__PASSWORD__|$2|g" $REPO_DIR/user-data
 
-    sed -i "s|__KERNEL__|${KERNEL}|g" $REPO_DIR/user-data
-
     sed -i "s|__GRUB_PARTITION__|${GRUB_PARTITION}|g" $REPO_DIR/user-data
     sed -i "s|__PRIMARY_PARTITION__|${PRIMARY_PARTITION}|g" $REPO_DIR/user-data
     sed -i "s|__AUX_PARTITION__|${AUX_PARTITION}|g" $REPO_DIR/user-data

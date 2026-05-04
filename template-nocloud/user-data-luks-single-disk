@@ -13,13 +13,20 @@ autoinstall:
     geoip: false
   version: 1
   early-commands:
-  #autoinstall keeps choking on seeing the existing paritions and crashes before it
-  # is able to overwrite them. Wiping the disk before we let autoinstall run
-  # uncomment the second line if using two disks
-    - parted -s __DISK_PATH_0__ mklabel gpt || true
+    - echo "  ____ ____   ____ "
+    - echo " / ___|  _ \ / ___|"
+    - echo "| |  _| | | | |    "
+    - echo "| |_| | |_| | |___ "
+    - echo " \____|____/ \____|"
+    - echo "   SOFTWARE ONLY"
+  # Deactivate all LVM volumes to release kernel locks
+    - vgchange -an || true
+  # Wipe the partition table and let the kernel know
+    - sgdisk --zap-all __DISK_PATH_0__ || true
+    - partprobe __DISK_PATH_0__ || true
   shutdown: poweroff
   kernel:
-    flavor: __KERNEL__
+    flavor: __KERNEL_FLAVOR__
   updates: all
   packages:
     - clevis
