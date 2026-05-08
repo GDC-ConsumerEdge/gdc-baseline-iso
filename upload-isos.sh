@@ -49,3 +49,35 @@ check_dependencies
 output_msg "Configuration loaded successfully."
 output_msg "Target: //${NAS_HOST}/${NAS_SHARE}"
 output_msg "Source: ${ISO_DIR}/${ISO_PATTERN}"
+
+# Find files and upload
+# Use a subshell to avoid changing the script's working directory
+(
+    cd "${ISO_DIR}"
+    
+    # Expand the pattern and check if files exist
+    # Enable nullglob so unmatched patterns return empty instead of the literal string
+    shopt -s nullglob
+    files=(${ISO_PATTERN})
+    shopt -u nullglob
+
+    if [[ ${#files[@]} -eq 0 ]]; then
+        output_msg "No files found matching '${ISO_PATTERN}' in ${ISO_DIR}."
+        exit 0
+    fi
+
+    for file in "${files[@]}"; do
+        output_msg "Uploading ${file}..."
+        
+        # Execute smbclient
+        # -U sets credentials, -c issues the command.
+        if ! smbclient "//${NAS_HOST}/${NAS_SHARE}" -U "${NAS_USER}%${NAS_PASS}" -c "put ${file}" ; then
+            output_error "Failed to upload ${file}."
+            # We don't exit here so other files can still attempt to upload
+        else
+            output_msg "Successfully uploaded ${file}."
+        fi
+    done
+)
+
+output_msg "Upload process completed."
