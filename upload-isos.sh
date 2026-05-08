@@ -20,6 +20,14 @@ function output_msg() {
     echo -e "\033[1;96m$1\033[0m"
 }
 
+function check_dependencies() {
+    if ! command -v smbclient &> /dev/null; then
+        output_error "Required command 'smbclient' is not installed."
+        echo "On Debian/Ubuntu, install it using: sudo apt install smbclient"
+        exit 1
+    fi
+}
+
 # Validation
 if [[ -z "${NAS_USER}" ]]; then
     output_error "Environment variable NAS_USER is required."
@@ -35,6 +43,8 @@ if [[ ! -d "${ISO_DIR}" ]]; then
     output_error "Directory ISO_DIR (${ISO_DIR}) does not exist."
     exit 1
 fi
+
+check_dependencies
 
 output_msg "Configuration loaded successfully."
 output_msg "Target: //${NAS_HOST}/${NAS_SHARE}"
