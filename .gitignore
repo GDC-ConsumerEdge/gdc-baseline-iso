@@ -15,3 +15,6 @@ nocloud/user-data
 *.code-workspace
 .vscode/
 .idea/
+
+.envrc
+.env.*
